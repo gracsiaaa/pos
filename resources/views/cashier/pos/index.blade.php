@@ -154,12 +154,17 @@
                             <div class="text-xs text-gray-500 mb-3" x-text="formatMoney(item.price)"></div>
                             
                             <div class="flex justify-between items-end">
-                                <div class="flex items-center bg-gray-100 rounded-lg p-0.5 border border-gray-200">
+                                <div class="flex items-center bg-gray-100 rounded-lg p-0.5 border" :class="item.quantity > item.max_stock ? 'border-red-400 bg-red-50' : 'border-gray-200'">
                                     <button @click="updateQuantity(index, -1)" class="w-7 h-7 flex items-center justify-center bg-white rounded-md text-gray-600 hover:bg-gray-50 shadow-sm border border-gray-200 focus:outline-none">-</button>
-                                    <input type="number" x-model.number="item.quantity" class="w-10 text-center bg-transparent border-0 p-0 text-sm font-bold focus:ring-0" min="1" @change="validateQuantity(index)">
+                                    <input type="number" x-model.number="item.quantity" class="w-12 text-center bg-transparent border-0 p-0 text-sm font-bold focus:ring-0" min="1" :class="item.quantity > item.max_stock ? 'text-red-600' : 'text-gray-800'">
                                     <button @click="updateQuantity(index, 1)" class="w-7 h-7 flex items-center justify-center bg-white rounded-md text-gray-600 hover:bg-gray-50 shadow-sm border border-gray-200 focus:outline-none">+</button>
                                 </div>
-                                <div class="font-bold text-gray-900" x-text="formatMoney(item.price * item.quantity)"></div>
+                                <div class="text-right">
+                                    <div class="font-bold text-gray-900" x-text="formatMoney(item.price * item.quantity)"></div>
+                                    <div x-show="item.quantity > item.max_stock" class="text-[10px] font-bold text-red-600 mt-0.5">
+                                        Max stok: <span x-text="item.max_stock"></span>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </template>
@@ -181,19 +186,29 @@
                 </div>
                 
                 <div class="mb-4">
-                    <div class="grid grid-cols-3 gap-2 mb-3">
-                        <label class="cursor-pointer">
-                            <input type="radio" x-model="paymentMethod" value="cash" class="peer sr-only">
-                            <div class="text-center px-2 py-2 text-sm font-medium rounded-lg border border-gray-200 peer-checked:border-primary-500 peer-checked:bg-primary-50 peer-checked:text-primary-700 transition-colors">Tunai</div>
-                        </label>
-                        <label class="cursor-pointer">
-                            <input type="radio" x-model="paymentMethod" value="debit" class="peer sr-only">
-                            <div class="text-center px-2 py-2 text-sm font-medium rounded-lg border border-gray-200 peer-checked:border-primary-500 peer-checked:bg-primary-50 peer-checked:text-primary-700 transition-colors">Debit</div>
-                        </label>
-                        <label class="cursor-pointer">
-                            <input type="radio" x-model="paymentMethod" value="qris" class="peer sr-only">
-                            <div class="text-center px-2 py-2 text-sm font-medium rounded-lg border border-gray-200 peer-checked:border-primary-500 peer-checked:bg-primary-50 peer-checked:text-primary-700 transition-colors">QRIS</div>
-                        </label>
+                    <div class="flex justify-between items-center mb-1.5">
+                        <label class="text-xs font-bold text-gray-500 uppercase tracking-wider">Metode Pembayaran</label>
+                        <span x-show="hasStockExceeded" class="text-[11px] font-bold text-red-600 animate-pulse">Terkunci (Stok Kurang)</span>
+                    </div>
+                    <div class="grid grid-cols-3 gap-2" :class="hasStockExceeded ? 'opacity-50 pointer-events-none' : ''">
+                        <button type="button" @click="selectPaymentMethod('cash')" 
+                                :disabled="hasStockExceeded"
+                                class="text-center px-2 py-2 text-sm font-medium rounded-lg border transition-colors"
+                                :class="paymentMethod === 'cash' ? 'border-primary-500 bg-primary-50 text-primary-700 font-bold' : 'border-gray-200 bg-white text-gray-700 hover:bg-gray-50'">
+                            Tunai
+                        </button>
+                        <button type="button" @click="selectPaymentMethod('debit')" 
+                                :disabled="hasStockExceeded"
+                                class="text-center px-2 py-2 text-sm font-medium rounded-lg border transition-colors"
+                                :class="paymentMethod === 'debit' ? 'border-primary-500 bg-primary-50 text-primary-700 font-bold' : 'border-gray-200 bg-white text-gray-700 hover:bg-gray-50'">
+                            Debit
+                        </button>
+                        <button type="button" @click="selectPaymentMethod('qris')" 
+                                :disabled="hasStockExceeded"
+                                class="text-center px-2 py-2 text-sm font-medium rounded-lg border transition-colors"
+                                :class="paymentMethod === 'qris' ? 'border-primary-500 bg-primary-50 text-primary-700 font-bold' : 'border-gray-200 bg-white text-gray-700 hover:bg-gray-50'">
+                            QRIS
+                        </button>
                     </div>
                 </div>
                 
@@ -202,7 +217,11 @@
                         <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                             <span class="font-bold text-gray-500">Rp</span>
                         </div>
-                        <input type="number" x-model.number="paidAmount" class="w-full pl-12 pr-4 py-3 bg-gray-50 border border-gray-300 rounded-xl text-xl font-bold text-right focus:bg-white focus:ring-2 focus:ring-primary-500 focus:border-primary-500" placeholder="0">
+                        <input type="text" 
+                               :value="paidAmountFormatted" 
+                               @input="onPaidAmountInput($event)"
+                               class="w-full pl-12 pr-4 py-3 bg-gray-50 border border-gray-300 rounded-xl text-xl font-bold text-right focus:bg-white focus:ring-2 focus:ring-primary-500 focus:border-primary-500" 
+                               placeholder="0">
                     </div>
                     
                     <!-- Quick Cash Buttons -->
@@ -220,11 +239,16 @@
                 </div>
 
                 <button @click="processCheckout()" 
-                        class="w-full flex justify-center items-center py-4 px-4 border border-transparent rounded-xl shadow-lg text-lg font-bold text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all relative overflow-hidden"
-                        :disabled="cart.length === 0 || (paymentMethod === 'cash' && changeAmount < 0) || isProcessing">
-                    <span x-show="!isProcessing" class="flex items-center">
+                        class="w-full flex justify-center items-center py-4 px-4 border border-transparent rounded-xl shadow-lg text-lg font-bold text-white focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-60 disabled:cursor-not-allowed transition-all relative overflow-hidden"
+                        :class="hasStockExceeded ? 'bg-red-600 hover:bg-red-700 focus:ring-red-500' : 'bg-primary-600 hover:bg-primary-700 focus:ring-primary-500'"
+                        :disabled="cart.length === 0 || hasStockExceeded || !paymentMethod || (paymentMethod === 'cash' && changeAmount < 0) || isProcessing">
+                    <span x-show="!isProcessing && !hasStockExceeded" class="flex items-center">
                         <svg class="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
-                        Proses Pembayaran (F2)
+                        <span x-text="paymentMethod ? 'Proses Pembayaran (F2)' : 'Pilih Metode Pembayaran'"></span>
+                    </span>
+                    <span x-show="!isProcessing && hasStockExceeded" class="flex items-center">
+                        <svg class="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+                        Stok Tidak Cukup
                     </span>
                     <span x-show="isProcessing" class="flex items-center">
                         <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
@@ -301,8 +325,8 @@
                 products: @json($productsWithImages),
                 search: '',
                 cart: [],
-                paymentMethod: 'cash',
-                paidAmount: null,
+                paymentMethod: null, // Awalnya belum terpilih
+                paidAmount: 0,
                 isProcessing: false,
                 showReceipt: false,
                 lastInvoice: '',
@@ -329,7 +353,7 @@
                     // Prevent default for F2 and Esc to handle shortcuts
                     if (e.key === 'F2') {
                         e.preventDefault();
-                        if (this.cart.length > 0 && !this.showReceipt && !this.isProcessing) {
+                        if (this.cart.length > 0 && !this.showReceipt && !this.isProcessing && !this.hasStockExceeded && this.paymentMethod) {
                             if (this.paymentMethod === 'cash' && this.changeAmount < 0) return;
                             this.processCheckout();
                         }
@@ -348,6 +372,10 @@
                     );
                 },
 
+                get hasStockExceeded() {
+                    return this.cart.some(item => Number(item.quantity) > Number(item.max_stock));
+                },
+
                 get subtotal() {
                     return this.cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
                 },
@@ -358,16 +386,37 @@
 
                 get changeAmount() {
                     if (this.paymentMethod !== 'cash') return 0;
-                    if (!this.paidAmount) return -this.total;
-                    return this.paidAmount - this.total;
+                    if (this.paidAmount === null || this.paidAmount === undefined || this.paidAmount === '') return 0;
+                    return Number(this.paidAmount) - this.total;
+                },
+
+                get paidAmountFormatted() {
+                    if (this.paidAmount === null || this.paidAmount === undefined || this.paidAmount === '') return '';
+                    return Number(this.paidAmount).toLocaleString('id-ID');
+                },
+
+                onPaidAmountInput(e) {
+                    // Ambil hanya digit angka
+                    const raw = e.target.value.replace(/\D/g, '');
+                    this.paidAmount = raw === '' ? 0 : Number(raw);
+                    e.target.value = this.paidAmountFormatted;
+                },
+
+                selectPaymentMethod(method) {
+                    if (this.hasStockExceeded) return;
+                    this.paymentMethod = method;
+                    if (method === 'cash') {
+                        // Default tunai langsung uang pas, kembalian 0
+                        this.paidAmount = this.total;
+                    } else {
+                        this.paidAmount = this.total;
+                    }
                 },
 
                 setQuickCash(amount) {
                     if (amount === 'exact') {
                         this.paidAmount = this.total;
                     } else {
-                        // Jika nominal yang ditekan lebih kecil dari total, abaikan atau tambah?
-                        // Di sini kita timpa valuenya
                         this.paidAmount = amount;
                     }
                 },
@@ -393,12 +442,7 @@
                 addToCart(product) {
                     const existingIndex = this.cart.findIndex(i => i.product_id === product.id);
                     if (existingIndex > -1) {
-                        if (this.cart[existingIndex].quantity < product.stock) {
-                            this.cart[existingIndex].quantity++;
-                        } else {
-                            // Flash effect or small notification here instead of alert ideally
-                            alert('Stok tidak mencukupi!');
-                        }
+                        this.cart[existingIndex].quantity++;
                     } else {
                         this.cart.unshift({ // Add to top of list
                             product_id: product.id,
@@ -408,32 +452,41 @@
                             max_stock: product.stock
                         });
                     }
+                    this.syncCashIfExact();
                 },
 
                 removeFromCart(index) {
                     this.cart.splice(index, 1);
+                    if (this.cart.length === 0) {
+                        this.paymentMethod = null;
+                        this.paidAmount = 0;
+                    } else {
+                        this.syncCashIfExact();
+                    }
                 },
 
                 updateQuantity(index, change) {
                     const item = this.cart[index];
-                    const newQ = item.quantity + change;
-                    if (newQ > 0 && newQ <= item.max_stock) {
+                    const newQ = Number(item.quantity) + change;
+                    if (newQ > 0) {
                         item.quantity = newQ;
+                        this.syncCashIfExact();
                     }
                 },
 
-                validateQuantity(index) {
-                    const item = this.cart[index];
-                    if (item.quantity > item.max_stock) item.quantity = item.max_stock;
-                    if (item.quantity < 1) item.quantity = 1;
+                syncCashIfExact() {
+                    if (this.paymentMethod === 'cash') {
+                        // Jika saat ini belum diubah atau bernilai pas, perbarui mengikuti total baru
+                        this.paidAmount = this.total;
+                    }
                 },
 
                 closeReceipt() {
                     this.showReceipt = false;
                     this.cart = [];
-                    this.paidAmount = null;
+                    this.paidAmount = 0;
                     this.search = '';
-                    this.paymentMethod = 'cash';
+                    this.paymentMethod = null;
                     
                     // Reload to get fresh stock
                     setTimeout(() => {

@@ -12,6 +12,16 @@ use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Cashier\TransactionController;
 
 
+Route::get('/', function () {
+    if (auth()->check()) {
+        if (auth()->user()->role->name === \App\Enums\RoleEnum::OWNER->value) {
+            return redirect()->route('dashboard');
+        }
+        return redirect()->route('pos.index');
+    }
+    return redirect()->route('login');
+});
+
 Route::middleware(['auth', 'active_user'])->group(function () {
     // Shared route
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');

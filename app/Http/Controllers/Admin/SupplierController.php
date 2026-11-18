@@ -26,6 +26,12 @@ class SupplierController extends Controller
         return redirect()->route('admin.suppliers.index')->with('success', 'Supplier berhasil ditambahkan.');
     }
 
+    public function show(Supplier $supplier)
+    {
+        $supplier->load(['products.category']);
+        return view('admin.suppliers.show', compact('supplier'));
+    }
+
     public function edit(Supplier $supplier)
     {
         return view('admin.suppliers.edit', compact('supplier'));
